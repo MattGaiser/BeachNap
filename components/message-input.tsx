@@ -5,7 +5,9 @@ import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PreflightCard } from "./preflight-card";
+import { ToneCheckCard } from "./tone-check-card";
 import { usePreflight } from "@/hooks/use-preflight";
+import { useToneCheck } from "@/hooks/use-tone-check";
 import { useUser } from "@/hooks/use-user";
 import { useMessageQueue } from "@/hooks/use-message-queue";
 import { MessageQueueIndicator } from "./message-queue-indicator";
@@ -20,6 +22,13 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const { user } = useUser();
   const { result, isLoading: isPreflightLoading, setQuery, clearResult } = usePreflight();
+  const {
+    result: toneResult,
+    isLoading: isToneLoading,
+    checkMessage,
+    dismiss: dismissTone,
+    reset: resetTone,
+  } = useToneCheck();
 
   // Message queue for non-blocking sends
   const { queue, enqueue, retry, remove, pendingCount } = useMessageQueue({
@@ -50,12 +59,14 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
     setMessage("");
     setQuery("");
     clearResult();
-  }, [message, user, enqueue, setQuery, clearResult]);
+    resetTone();
+  }, [message, user, enqueue, setQuery, clearResult, resetTone]);
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;
     setMessage(value);
     setQuery(value);
+    checkMessage(value);
   }
 
   const isSendDisabled = !message.trim();
@@ -84,6 +95,15 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
           queue={queue}
           onRetry={retry}
           onRemove={remove}
+        />
+      )}
+
+      {/* Tone Check Card - warns about incomplete messages */}
+      {(toneResult || isToneLoading) && !result && !isPreflightLoading && (
+        <ToneCheckCard
+          result={toneResult}
+          isLoading={isToneLoading}
+          onDismiss={dismissTone}
         />
       )}
 
