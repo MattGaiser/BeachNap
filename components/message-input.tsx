@@ -62,6 +62,19 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
     resetTone();
   }, [message, user, enqueue, setQuery, clearResult, resetTone]);
 
+  // Force send despite tone warning - dismisses warning and sends immediately
+  const handleSendAnyway = useCallback(() => {
+    if (!message.trim() || !user) return;
+
+    // Dismiss the warning first, then send
+    dismissTone();
+    enqueue(message);
+    setMessage("");
+    setQuery("");
+    clearResult();
+    resetTone();
+  }, [message, user, dismissTone, enqueue, setQuery, clearResult, resetTone]);
+
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;
     setMessage(value);
@@ -69,7 +82,11 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
     checkMessage(value);
   }
 
-  const isSendDisabled = !message.trim();
+  // Block sending if:
+  // 1. Message is empty
+  // 2. Tone check detected incomplete message (user must dismiss warning first)
+  const hasToneWarning = toneResult?.isIncomplete === true;
+  const isSendDisabled = !message.trim() || hasToneWarning;
 
   // Store handleSend in a ref for the event handler
   const handleSendRef = useRef(handleSend);
@@ -98,12 +115,13 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
         />
       )}
 
-      {/* Tone Check Card - warns about incomplete messages */}
+      {/* Tone Check Card - blocks sending until dismissed */}
       {(toneResult || isToneLoading) && !result && !isPreflightLoading && (
         <ToneCheckCard
           result={toneResult}
           isLoading={isToneLoading}
           onDismiss={dismissTone}
+          onSendAnyway={handleSendAnyway}
         />
       )}
 
