@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageItem } from "./message-item";
+import { ToneCheckCard } from "./tone-check-card";
 import { MessageWithUser } from "@/types/database";
 import { useUser } from "@/hooks/use-user";
+import { useToneCheck } from "@/hooks/use-tone-check";
 import { createClient } from "@/lib/supabase/client";
 
 interface ThreadPanelProps {
@@ -24,6 +26,13 @@ export function ThreadPanel({ parentMessage, channelId, onClose, onStartDM }: Th
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
+  const {
+    result: toneResult,
+    isLoading: isToneLoading,
+    checkMessage,
+    dismiss: dismissTone,
+    reset: resetTone,
+  } = useToneCheck();
 
   // Fetch thread replies
   useEffect(() => {
@@ -103,6 +112,7 @@ export function ThreadPanel({ parentMessage, channelId, onClose, onStartDM }: Th
 
       if (res.ok) {
         setReplyText("");
+        resetTone();
       }
     } catch (error) {
       console.error("Failed to send reply:", error);
@@ -111,10 +121,52 @@ export function ThreadPanel({ parentMessage, channelId, onClose, onStartDM }: Th
     }
   }
 
+  // Force send despite tone warning
+  const handleSendAnyway = useCallback(async () => {
+    if (!replyText.trim() || !user || !parentMessage) return;
+
+    dismissTone();
+    setIsSending(true);
+
+    try {
+      const res = await fetch("/api/threads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: replyText,
+          channelId,
+          userId: user.id,
+          parentId: parentMessage.id,
+        }),
+      });
+
+      if (res.ok) {
+        setReplyText("");
+        resetTone();
+      }
+    } catch (error) {
+      console.error("Failed to send reply:", error);
+    } finally {
+      setIsSending(false);
+    }
+  }, [replyText, user, parentMessage, channelId, dismissTone, resetTone]);
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value;
+    setReplyText(value);
+    checkMessage(value);
+  }
+
+  // Block sending if tone check detected incomplete message
+  const hasToneWarning = toneResult?.isIncomplete === true;
+  const isSendDisabled = isSending || !replyText.trim() || hasToneWarning;
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendReply();
+      if (!isSendDisabled) {
+        handleSendReply();
+      }
     }
   }
 
@@ -155,11 +207,21 @@ export function ThreadPanel({ parentMessage, channelId, onClose, onStartDM }: Th
       </ScrollArea>
 
       {/* Reply Input */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t space-y-3">
+        {/* Tone Check Card - blocks sending until dismissed */}
+        {(toneResult || isToneLoading) && (
+          <ToneCheckCard
+            result={toneResult}
+            isLoading={isToneLoading}
+            onDismiss={dismissTone}
+            onSendAnyway={handleSendAnyway}
+          />
+        )}
+
         <div className="flex gap-2">
           <Input
             value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Reply..."
             disabled={isSending}
@@ -167,7 +229,7 @@ export function ThreadPanel({ parentMessage, channelId, onClose, onStartDM }: Th
           />
           <Button
             onClick={handleSendReply}
-            disabled={isSending || !replyText.trim()}
+            disabled={isSendDisabled}
             size="icon"
           >
             {isSending ? (

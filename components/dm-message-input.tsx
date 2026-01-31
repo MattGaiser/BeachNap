@@ -5,7 +5,9 @@ import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PreflightCard } from "./preflight-card";
+import { ToneCheckCard } from "./tone-check-card";
 import { usePreflight } from "@/hooks/use-preflight";
+import { useToneCheck } from "@/hooks/use-tone-check";
 import { useMessageQueue } from "@/hooks/use-message-queue";
 import { MessageQueueIndicator } from "./message-queue-indicator";
 
@@ -22,6 +24,13 @@ export function DmMessageInput({
 }: DmMessageInputProps) {
   const [message, setMessage] = useState("");
   const { result, isLoading: isPreflightLoading, setQuery, clearResult } = usePreflight();
+  const {
+    result: toneResult,
+    isLoading: isToneLoading,
+    checkMessage,
+    dismiss: dismissTone,
+    reset: resetTone,
+  } = useToneCheck();
 
   // Message queue for non-blocking sends
   const { queue, enqueue, retry, remove, pendingCount } = useMessageQueue({
@@ -50,15 +59,32 @@ export function DmMessageInput({
     setMessage("");
     setQuery("");
     clearResult();
-  }, [message, enqueue, setQuery, clearResult]);
+    resetTone();
+  }, [message, enqueue, setQuery, clearResult, resetTone]);
+
+  // Force send despite tone warning - dismisses warning and sends immediately
+  const handleSendAnyway = useCallback(() => {
+    if (!message.trim()) return;
+
+    // Dismiss the warning first, then send
+    dismissTone();
+    enqueue(message);
+    setMessage("");
+    setQuery("");
+    clearResult();
+    resetTone();
+  }, [message, dismissTone, enqueue, setQuery, clearResult, resetTone]);
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;
     setMessage(value);
     setQuery(value);
+    checkMessage(value);
   }
 
-  const isSendDisabled = !message.trim();
+  // Block sending if tone check detected incomplete message
+  const hasToneWarning = toneResult?.isIncomplete === true;
+  const isSendDisabled = !message.trim() || hasToneWarning;
 
   // Store handleSend in a ref for the event handler
   const handleSendRef = useRef(handleSend);
@@ -84,6 +110,16 @@ export function DmMessageInput({
           queue={queue}
           onRetry={retry}
           onRemove={remove}
+        />
+      )}
+
+      {/* Tone Check Card - blocks sending until dismissed */}
+      {(toneResult || isToneLoading) && !result && !isPreflightLoading && (
+        <ToneCheckCard
+          result={toneResult}
+          isLoading={isToneLoading}
+          onDismiss={dismissTone}
+          onSendAnyway={handleSendAnyway}
         />
       )}
 
