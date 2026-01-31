@@ -3,9 +3,11 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Channel, MessageWithUser } from "@/types/database";
+import { ActionItem } from "@/types/action-items";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { ThreadPanel } from "./thread-panel";
+import { ActionItemsPanel } from "./action-items-panel";
 import { ChannelHeader } from "./channel-header";
 import { CatchMeUpCard } from "./catch-me-up-card";
 import { useMessages } from "@/hooks/use-messages";
@@ -16,6 +18,7 @@ interface CatchMeUpResult {
   messageCount: number;
   timeRange: string;
   noActivity: boolean;
+  actionItems?: ActionItem[];
 }
 
 interface ChannelViewProps {
@@ -29,6 +32,7 @@ export function ChannelView({ channel }: ChannelViewProps) {
   const [activeThread, setActiveThread] = useState<MessageWithUser | null>(null);
   const [catchMeUpResult, setCatchMeUpResult] = useState<CatchMeUpResult | null>(null);
   const [isCatchMeUpLoading, setIsCatchMeUpLoading] = useState(false);
+  const [showActionItems, setShowActionItems] = useState(false);
 
   const handleCatchMeUp = useCallback(async () => {
     setIsCatchMeUpLoading(true);
@@ -52,6 +56,14 @@ export function ChannelView({ channel }: ChannelViewProps) {
 
   const handleDismissCatchMeUp = useCallback(() => {
     setCatchMeUpResult(null);
+  }, []);
+
+  const handleOpenActionItems = useCallback(() => {
+    setShowActionItems(true);
+  }, []);
+
+  const handleCloseActionItems = useCallback(() => {
+    setShowActionItems(false);
   }, []);
 
   function handleOpenThread(messageId: string) {
@@ -91,11 +103,12 @@ export function ChannelView({ channel }: ChannelViewProps) {
     <div className="flex-1 flex h-full">
       {/* Main Channel View */}
       <div className="flex-1 flex flex-col h-full">
-        {/* Channel Header with Catch Me Up */}
+        {/* Channel Header with Catch Me Up and Action Items */}
         <ChannelHeader
           channelName={channel.name}
           channelId={channel.id}
           onCatchMeUp={handleCatchMeUp}
+          onOpenActionItems={handleOpenActionItems}
           isLoading={isCatchMeUpLoading}
         />
 
@@ -127,6 +140,15 @@ export function ChannelView({ channel }: ChannelViewProps) {
           channelId={channel.id}
           onClose={handleCloseThread}
           onStartDM={handleStartDM}
+        />
+      )}
+
+      {/* Action Items Panel */}
+      {showActionItems && (
+        <ActionItemsPanel
+          channelId={channel.id}
+          channelName={channel.name}
+          onClose={handleCloseActionItems}
         />
       )}
     </div>

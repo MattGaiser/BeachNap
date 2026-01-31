@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect, useCallback } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MessageWithUser } from "@/types/database";
+import { MessageWithUser, ReactionWithUsers } from "@/types/database";
 import { formatDistanceToNow } from "@/lib/date";
 import { MessageSquare } from "lucide-react";
+import { ReactionDisplay } from "./reaction-display";
+import { ReactionPicker, QuickReactions } from "./reaction-picker";
+import { useReactionSuggestions } from "@/hooks/use-reaction-suggestions";
 
 interface MessageItemProps {
   message: MessageWithUser;
@@ -12,14 +16,45 @@ interface MessageItemProps {
   onStartDM?: (userId: string) => void;
   currentUserId?: string;
   isThreadReply?: boolean;
+  reactions?: ReactionWithUsers[];
+  onReactionToggle?: (messageId: string, emoji: string) => void;
 }
 
-export function MessageItem({ message, onOpenThread, onStartDM, currentUserId, isThreadReply = false }: MessageItemProps) {
+export function MessageItem({
+  message,
+  onOpenThread,
+  onStartDM,
+  currentUserId,
+  isThreadReply = false,
+  reactions = [],
+  onReactionToggle,
+}: MessageItemProps) {
   const username = message.profiles?.username || "Unknown";
   const initial = username[0]?.toUpperCase() || "?";
   const replyCount = (message as MessageWithUser & { reply_count?: number }).reply_count || 0;
   const isOwnMessage = currentUserId === message.user_id;
   const canStartDM = onStartDM && !isOwnMessage;
+
+  const { suggestions, isLoading: suggestionsLoading, getSuggestions } = useReactionSuggestions();
+
+  // Fetch suggestions when hovering
+  const handleMouseEnter = useCallback(() => {
+    if (message.content) {
+      getSuggestions(message.content);
+    }
+  }, [message.content, getSuggestions]);
+
+  const handleReactionSelect = useCallback((emoji: string) => {
+    if (onReactionToggle) {
+      onReactionToggle(message.id, emoji);
+    }
+  }, [message.id, onReactionToggle]);
+
+  const handleReactionToggle = useCallback((emoji: string) => {
+    if (onReactionToggle) {
+      onReactionToggle(message.id, emoji);
+    }
+  }, [message.id, onReactionToggle]);
 
   function handleUsernameClick() {
     if (canStartDM) {
@@ -30,7 +65,7 @@ export function MessageItem({ message, onOpenThread, onStartDM, currentUserId, i
   if (isOwnMessage) {
     // Own messages: right-aligned with purple bubble
     return (
-      <div className="flex justify-end group py-1">
+      <div className="flex justify-end group py-1" onMouseEnter={handleMouseEnter}>
         <div className="max-w-[70%]">
           <div className="flex items-baseline gap-2 justify-end mb-1">
             <span className="text-xs text-muted-foreground">
@@ -43,9 +78,23 @@ export function MessageItem({ message, onOpenThread, onStartDM, currentUserId, i
               {message.content}
             </p>
           </div>
-          {/* Thread indicator and reply button */}
+          {/* Reactions */}
+          <div className="flex justify-end">
+            <ReactionDisplay
+              reactions={reactions}
+              onToggle={handleReactionToggle}
+              currentUserId={currentUserId}
+            />
+          </div>
+          {/* Thread indicator, reply button, and reaction picker */}
           {!isThreadReply && (
             <div className="flex items-center gap-2 mt-1 justify-end">
+              <QuickReactions suggestions={suggestions} onSelect={handleReactionSelect} />
+              <ReactionPicker
+                suggestions={suggestions}
+                suggestionsLoading={suggestionsLoading}
+                onSelect={handleReactionSelect}
+              />
               {replyCount > 0 && (
                 <Button
                   variant="ghost"
@@ -75,7 +124,7 @@ export function MessageItem({ message, onOpenThread, onStartDM, currentUserId, i
 
   // Other people's messages: left-aligned with avatar
   return (
-    <div className="flex gap-3 group py-1">
+    <div className="flex gap-3 group py-1" onMouseEnter={handleMouseEnter}>
       <Avatar
         className={`h-9 w-9 mt-0.5 flex-shrink-0 ${canStartDM ? 'cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all' : ''}`}
         onClick={handleUsernameClick}
@@ -102,9 +151,21 @@ export function MessageItem({ message, onOpenThread, onStartDM, currentUserId, i
             {message.content}
           </p>
         </div>
-        {/* Thread indicator and reply button */}
+        {/* Reactions */}
+        <ReactionDisplay
+          reactions={reactions}
+          onToggle={handleReactionToggle}
+          currentUserId={currentUserId}
+        />
+        {/* Thread indicator, reply button, and reaction picker */}
         {!isThreadReply && (
           <div className="flex items-center gap-2 mt-1">
+            <QuickReactions suggestions={suggestions} onSelect={handleReactionSelect} />
+            <ReactionPicker
+              suggestions={suggestions}
+              suggestionsLoading={suggestionsLoading}
+              onSelect={handleReactionSelect}
+            />
             {replyCount > 0 && (
               <Button
                 variant="ghost"

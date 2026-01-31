@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { askcodi } from "@/lib/askcodi";
+import { ActionItem } from "@/types/action-items";
+
+// Action item patterns (simplified subset for inline use)
+const ACTION_PATTERNS = [
+  { pattern: /\bTODO[:\s-]+(.+)/i, type: "todo" },
+  { pattern: /@(\w+)\s+(please|can you|could you)\s+(.+)/i, type: "request" },
+  { pattern: /\b(I'll|I will|I'm going to)\s+(.+)/i, type: "commitment" },
+];
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,6 +51,7 @@ export async function POST(request: NextRequest) {
         messageCount: 0,
         timeRange: `Last ${hoursBack} hours`,
         noActivity: true,
+        actionItems: [],
       });
     }
 
@@ -88,6 +97,44 @@ Keep your response under 200 words.`,
 
     const summary = completion.choices[0]?.message?.content?.trim() || "Unable to generate summary.";
 
+    // Extract action items using quick patterns
+    const actionItems: ActionItem[] = [];
+    for (const msg of messages) {
+      const username = (msg.profiles as { username: string } | null)?.username || "Unknown";
+      const content = msg.content;
+
+      for (const { pattern, type } of ACTION_PATTERNS) {
+        const match = content.match(pattern);
+        if (match) {
+          let extractedTask = "";
+          let assignee: string | undefined;
+
+          if (type === "request" && match[1] && match[3]) {
+            assignee = match[1];
+            extractedTask = match[3].replace(/[.!?]+$/, "").trim();
+          } else if (type === "commitment" && match[2]) {
+            extractedTask = match[2].replace(/[.!?]+$/, "").trim();
+          } else if (match[1]) {
+            extractedTask = match[1].replace(/[.!?]+$/, "").trim();
+          }
+
+          if (extractedTask.length >= 5 && extractedTask.split(" ").length >= 2) {
+            actionItems.push({
+              messageId: msg.id,
+              content: msg.content,
+              extractedTask: extractedTask.charAt(0).toUpperCase() + extractedTask.slice(1),
+              assignee,
+              createdAt: msg.created_at,
+              channelId,
+              authorUsername: username,
+              authorId: "",
+            });
+            break; // Only one action item per message
+          }
+        }
+      }
+    }
+
     // Calculate actual time range
     const firstMessage = new Date(messages[0].created_at);
     const lastMessage = new Date(messages[messages.length - 1].created_at);
@@ -97,6 +144,7 @@ Keep your response under 200 words.`,
       messageCount: messages.length,
       timeRange: formatTimeRange(firstMessage, lastMessage),
       noActivity: false,
+      actionItems,
     });
   } catch (error) {
     console.error("Catch-me-up error:", error);

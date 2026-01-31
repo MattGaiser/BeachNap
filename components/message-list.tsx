@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageItem } from "./message-item";
 import { MessageWithUser } from "@/types/database";
 import { Loader2 } from "lucide-react";
+import { useReactions } from "@/hooks/use-reactions";
 
 interface MessageListProps {
   messages: MessageWithUser[];
@@ -16,6 +17,23 @@ interface MessageListProps {
 
 export function MessageList({ messages, isLoading, onOpenThread, onStartDM, currentUserId }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Get message IDs for reactions
+  const messageIds = useMemo(
+    () => messages.filter((m) => !(m as MessageWithUser & { parent_id?: string }).parent_id).map((m) => m.id),
+    [messages]
+  );
+
+  const { reactions, toggleReaction } = useReactions(messageIds);
+
+  const handleReactionToggle = useCallback(
+    (messageId: string, emoji: string) => {
+      if (currentUserId) {
+        toggleReaction(messageId, currentUserId, emoji);
+      }
+    },
+    [currentUserId, toggleReaction]
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,6 +70,8 @@ export function MessageList({ messages, isLoading, onOpenThread, onStartDM, curr
             onOpenThread={onOpenThread}
             onStartDM={onStartDM}
             currentUserId={currentUserId}
+            reactions={reactions[message.id] || []}
+            onReactionToggle={handleReactionToggle}
           />
         ))}
         <div ref={bottomRef} />

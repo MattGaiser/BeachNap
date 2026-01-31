@@ -126,6 +126,29 @@ export interface Database {
           created_at?: string;
         };
       };
+      message_reactions: {
+        Row: {
+          id: string;
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          message_id?: string;
+          user_id?: string;
+          emoji?: string;
+          created_at?: string;
+        };
+      };
     };
     Functions: {
       search_messages: {
@@ -176,3 +199,16 @@ export type MessageWithUser = Message & {
 export type DmMessageWithUser = DmMessage & {
   profiles: Profile;
 };
+
+export type MessageReaction = Database["public"]["Tables"]["message_reactions"]["Row"];
+
+export interface ReactionWithUsers {
+  emoji: string;
+  count: number;
+  userIds: string[];
+  users?: Profile[];
+}
+
+export interface MessageWithReactions extends MessageWithUser {
+  reactions?: ReactionWithUsers[];
+}

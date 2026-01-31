@@ -1,15 +1,19 @@
 "use client";
 
-import { Sparkles, X, MessageSquare, Clock } from "lucide-react";
+import { useState } from "react";
+import { Sparkles, X, MessageSquare, Clock, CheckSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ActionItem } from "@/types/action-items";
+import { ActionItemCard } from "./action-item-card";
 
 interface CatchMeUpResult {
   summary: string | null;
   messageCount: number;
   timeRange: string;
   noActivity: boolean;
+  actionItems?: ActionItem[];
 }
 
 interface CatchMeUpCardProps {
@@ -18,6 +22,9 @@ interface CatchMeUpCardProps {
 }
 
 export function CatchMeUpCard({ result, onDismiss }: CatchMeUpCardProps) {
+  const [showActionItems, setShowActionItems] = useState(false);
+  const actionItems = result?.actionItems || [];
+
   if (!result) {
     return null;
   }
@@ -83,6 +90,31 @@ export function CatchMeUpCard({ result, onDismiss }: CatchMeUpCardProps) {
             {result.timeRange}
           </span>
         </div>
+
+        {/* Action Items Section */}
+        {actionItems.length > 0 && (
+          <div className="pt-2 mt-2 border-t border-blue-200">
+            <button
+              onClick={() => setShowActionItems(!showActionItems)}
+              className="flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 transition-colors w-full"
+            >
+              <CheckSquare className="h-4 w-4" />
+              <span>{actionItems.length} Action Item{actionItems.length !== 1 ? "s" : ""}</span>
+              {showActionItems ? (
+                <ChevronUp className="h-4 w-4 ml-auto" />
+              ) : (
+                <ChevronDown className="h-4 w-4 ml-auto" />
+              )}
+            </button>
+            {showActionItems && (
+              <div className="mt-2 space-y-2">
+                {actionItems.map((item) => (
+                  <ActionItemCard key={item.messageId} item={item} compact />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
