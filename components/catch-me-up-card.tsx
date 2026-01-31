@@ -19,11 +19,46 @@ interface CatchMeUpResult {
 interface CatchMeUpCardProps {
   result: CatchMeUpResult | null;
   onDismiss: () => void;
+  userId?: string;
+  onDismissActionItem?: (messageId: string) => void;
 }
 
-export function CatchMeUpCard({ result, onDismiss }: CatchMeUpCardProps) {
+export function CatchMeUpCard({
+  result,
+  onDismiss,
+  userId,
+  onDismissActionItem,
+}: CatchMeUpCardProps) {
   const [showActionItems, setShowActionItems] = useState(false);
-  const actionItems = result?.actionItems || [];
+  const [dismissedItems, setDismissedItems] = useState<string[]>([]);
+
+  // Filter out locally dismissed items
+  const actionItems = (result?.actionItems || []).filter(
+    (item) => !dismissedItems.includes(item.messageId)
+  );
+
+  const handleDismissActionItem = async (messageId: string) => {
+    if (!userId) return;
+
+    // Optimistically remove from UI
+    setDismissedItems((prev) => [...prev, messageId]);
+
+    // Call API to persist dismissal
+    try {
+      await fetch("/api/action-items", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, userId }),
+      });
+    } catch (error) {
+      console.error("Failed to dismiss action item:", error);
+      // Revert on error
+      setDismissedItems((prev) => prev.filter((id) => id !== messageId));
+    }
+
+    // Also notify parent if callback provided
+    onDismissActionItem?.(messageId);
+  };
 
   if (!result) {
     return null;
@@ -109,7 +144,12 @@ export function CatchMeUpCard({ result, onDismiss }: CatchMeUpCardProps) {
             {showActionItems && (
               <div className="mt-2 space-y-2">
                 {actionItems.map((item) => (
-                  <ActionItemCard key={item.messageId} item={item} compact />
+                  <ActionItemCard
+                    key={item.messageId}
+                    item={item}
+                    compact
+                    onDismiss={userId ? handleDismissActionItem : undefined}
+                  />
                 ))}
               </div>
             )}

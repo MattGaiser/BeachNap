@@ -10,6 +10,7 @@ import { useActionItems } from "@/hooks/use-action-items";
 interface ActionItemsPanelProps {
   channelId: string;
   channelName: string;
+  userId?: string;
   onClose: () => void;
   onJumpToMessage?: (messageId: string) => void;
 }
@@ -17,11 +18,12 @@ interface ActionItemsPanelProps {
 export function ActionItemsPanel({
   channelId,
   channelName,
+  userId,
   onClose,
   onJumpToMessage,
 }: ActionItemsPanelProps) {
-  const { items, isLoading, timeRange, fetchActionItems, refresh } =
-    useActionItems(channelId);
+  const { items, isLoading, timeRange, fetchActionItems, refresh, dismissItem } =
+    useActionItems(channelId, userId);
 
   useEffect(() => {
     fetchActionItems();
@@ -88,6 +90,7 @@ export function ActionItemsPanel({
                 key={item.messageId}
                 item={item}
                 onJumpToMessage={onJumpToMessage}
+                onDismiss={userId ? dismissItem : undefined}
               />
             ))
           )}

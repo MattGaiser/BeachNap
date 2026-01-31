@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hash, MessageSquare, LogOut, Users, BookOpen } from "lucide-react";
+import { Hash, MessageSquare, LogOut, UserPlus, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -70,8 +70,8 @@ export function Sidebar() {
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Direct Messages
             </span>
-            <Link href="/dm" className="text-slate-400 hover:text-white">
-              <Users className="h-4 w-4" />
+            <Link href="/dm" className="text-slate-400 hover:text-white" title="Start new conversation">
+              <UserPlus className="h-4 w-4" />
             </Link>
           </div>
           <nav className="space-y-1">

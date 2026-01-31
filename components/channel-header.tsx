@@ -1,7 +1,8 @@
 "use client";
 
-import { Hash, Sparkles, Loader2, CheckSquare } from "lucide-react";
+import { Hash, Sparkles, Loader2, CheckSquare, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "@/lib/date";
 
 interface ChannelHeaderProps {
   channelName: string;
@@ -9,6 +10,7 @@ interface ChannelHeaderProps {
   onCatchMeUp: () => void;
   onOpenActionItems?: () => void;
   isLoading: boolean;
+  lastViewed?: Date | null;
 }
 
 export function ChannelHeader({
@@ -17,6 +19,7 @@ export function ChannelHeader({
   onCatchMeUp,
   onOpenActionItems,
   isLoading,
+  lastViewed,
 }: ChannelHeaderProps) {
   return (
     <div className="border-b px-4 py-3 flex items-center justify-between">
@@ -24,7 +27,13 @@ export function ChannelHeader({
         <Hash className="h-5 w-5 text-muted-foreground" />
         <h1 className="text-lg font-semibold">{channelName}</h1>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        {lastViewed && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>Last viewed {formatDistanceToNow(lastViewed)}</span>
+          </div>
+        )}
         {onOpenActionItems && (
           <Button
             variant="outline"

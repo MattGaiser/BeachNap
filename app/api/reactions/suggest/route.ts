@@ -81,8 +81,18 @@ Common reactions: 👍 ❤️ 😂 🎉 👀 🤔 👏 🔥 💯 ✅ 🙌 💡 �
 
         const response = completion.choices[0]?.message?.content?.trim() || "";
         // Extract emojis from response
-        const emojiRegex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
-        const emojis = response.match(emojiRegex) || [];
+        // Use Array.from to properly handle emoji characters (which may be multi-byte)
+        const emojis = Array.from(response).filter(char => {
+          const code = char.codePointAt(0) || 0;
+          // Check if character is in common emoji ranges
+          return (
+            (code >= 0x1F300 && code <= 0x1F9FF) || // Misc symbols, emoticons, etc.
+            (code >= 0x2600 && code <= 0x26FF) ||   // Misc symbols
+            (code >= 0x2700 && code <= 0x27BF) ||   // Dingbats
+            (code >= 0x1F600 && code <= 0x1F64F) || // Emoticons
+            (code >= 0x1F680 && code <= 0x1F6FF)    // Transport & map
+          );
+        });
 
         if (emojis.length >= 2) {
           return NextResponse.json({ suggestions: emojis.slice(0, 4), method: "ai" });

@@ -10,9 +10,19 @@ const ACTION_PATTERNS = [
   { pattern: /\b(I'll|I will|I'm going to)\s+(.+)/i, type: "commitment" },
 ];
 
+type ProfileType = { username: string } | { username: string }[] | null;
+
+function getUsername(profiles: ProfileType): string {
+  if (!profiles) return "Unknown";
+  if (Array.isArray(profiles)) {
+    return profiles[0]?.username || "Unknown";
+  }
+  return profiles.username || "Unknown";
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { channelId, hoursBack = 24 } = await request.json();
+    const { channelId, userId, hoursBack = 24 } = await request.json();
 
     if (!channelId) {
       return NextResponse.json({ error: "Channel ID required" }, { status: 400 });
@@ -20,9 +30,23 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // Calculate time range
-    const since = new Date();
-    since.setHours(since.getHours() - hoursBack);
+    // Get last viewed time for this user/channel, or default to hoursBack
+    let since = new Date();
+    let timeRangeLabel = `Last ${hoursBack} hours`;
+
+    if (userId) {
+      const { data: lastView } = await supabase
+        .rpc('get_last_channel_view', { p_user_id: userId, p_channel_id: channelId });
+
+      if (lastView) {
+        since = new Date(lastView);
+        timeRangeLabel = "Since your last visit";
+      } else {
+        since.setHours(since.getHours() - hoursBack);
+      }
+    } else {
+      since.setHours(since.getHours() - hoursBack);
+    }
 
     // Fetch messages from the time range
     const { data: messages, error } = await supabase
@@ -57,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Format messages for the AI
     const formattedMessages = messages.map((msg) => {
-      const username = (msg.profiles as { username: string } | null)?.username || "Unknown";
+      const username = getUsername(msg.profiles as ProfileType);
       const time = new Date(msg.created_at).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
@@ -97,10 +121,28 @@ Keep your response under 200 words.`,
 
     const summary = completion.choices[0]?.message?.content?.trim() || "Unable to generate summary.";
 
+    // Get dismissed action items for this user
+    let dismissedMessageIds: string[] = [];
+    if (userId) {
+      const { data: dismissed } = await supabase
+        .from("dismissed_action_items")
+        .select("message_id")
+        .eq("user_id", userId);
+
+      if (dismissed) {
+        dismissedMessageIds = dismissed.map(d => d.message_id);
+      }
+    }
+
     // Extract action items using quick patterns
     const actionItems: ActionItem[] = [];
     for (const msg of messages) {
-      const username = (msg.profiles as { username: string } | null)?.username || "Unknown";
+      // Skip dismissed action items
+      if (dismissedMessageIds.includes(msg.id)) {
+        continue;
+      }
+
+      const username = getUsername(msg.profiles as ProfileType);
       const content = msg.content;
 
       for (const { pattern, type } of ACTION_PATTERNS) {
@@ -138,6 +180,11 @@ Keep your response under 200 words.`,
     // Calculate actual time range
     const firstMessage = new Date(messages[0].created_at);
     const lastMessage = new Date(messages[messages.length - 1].created_at);
+
+    // Update channel view timestamp for this user
+    if (userId) {
+      await supabase.rpc('update_channel_view', { p_user_id: userId, p_channel_id: channelId });
+    }
 
     return NextResponse.json({
       summary,

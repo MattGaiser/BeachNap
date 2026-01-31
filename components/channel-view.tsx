@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Channel, MessageWithUser } from "@/types/database";
 import { ActionItem } from "@/types/action-items";
@@ -33,6 +33,28 @@ export function ChannelView({ channel }: ChannelViewProps) {
   const [catchMeUpResult, setCatchMeUpResult] = useState<CatchMeUpResult | null>(null);
   const [isCatchMeUpLoading, setIsCatchMeUpLoading] = useState(false);
   const [showActionItems, setShowActionItems] = useState(false);
+  const [lastViewed, setLastViewed] = useState<Date | null>(null);
+
+  // Fetch last viewed time on mount
+  useEffect(() => {
+    async function fetchLastViewed() {
+      if (!user?.id) return;
+
+      try {
+        const response = await fetch(
+          `/api/channel-view?channelId=${channel.id}&userId=${user.id}`
+        );
+        const data = await response.json();
+        if (data.lastViewed) {
+          setLastViewed(new Date(data.lastViewed));
+        }
+      } catch (error) {
+        console.error("Failed to fetch last viewed:", error);
+      }
+    }
+
+    fetchLastViewed();
+  }, [channel.id, user?.id]);
 
   const handleCatchMeUp = useCallback(async () => {
     setIsCatchMeUpLoading(true);
@@ -42,17 +64,23 @@ export function ChannelView({ channel }: ChannelViewProps) {
       const response = await fetch("/api/catch-me-up", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId: channel.id, hoursBack: 24 }),
+        body: JSON.stringify({
+          channelId: channel.id,
+          userId: user?.id,
+          hoursBack: 24,
+        }),
       });
 
       const data = await response.json();
       setCatchMeUpResult(data);
+      // Update last viewed to now since catch-me-up updates the channel view
+      setLastViewed(new Date());
     } catch (error) {
       console.error("Failed to get catch-me-up summary:", error);
     } finally {
       setIsCatchMeUpLoading(false);
     }
-  }, [channel.id]);
+  }, [channel.id, user?.id]);
 
   const handleDismissCatchMeUp = useCallback(() => {
     setCatchMeUpResult(null);
@@ -110,6 +138,7 @@ export function ChannelView({ channel }: ChannelViewProps) {
           onCatchMeUp={handleCatchMeUp}
           onOpenActionItems={handleOpenActionItems}
           isLoading={isCatchMeUpLoading}
+          lastViewed={lastViewed}
         />
 
         {/* Catch Me Up Result */}
@@ -117,6 +146,7 @@ export function ChannelView({ channel }: ChannelViewProps) {
           <CatchMeUpCard
             result={catchMeUpResult}
             onDismiss={handleDismissCatchMeUp}
+            userId={user?.id}
           />
         )}
 
@@ -148,6 +178,7 @@ export function ChannelView({ channel }: ChannelViewProps) {
         <ActionItemsPanel
           channelId={channel.id}
           channelName={channel.name}
+          userId={user?.id}
           onClose={handleCloseActionItems}
         />
       )}

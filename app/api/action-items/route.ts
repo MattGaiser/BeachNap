@@ -27,8 +27,16 @@ interface MessageWithProfile {
   content: string;
   created_at: string;
   channel_id: string;
-  profiles: { username: string } | null;
+  profiles: { username: string } | { username: string }[] | null;
   user_id: string;
+}
+
+function getUsername(profiles: { username: string } | { username: string }[] | null): string {
+  if (!profiles) return "Unknown";
+  if (Array.isArray(profiles)) {
+    return profiles[0]?.username || "Unknown";
+  }
+  return profiles.username || "Unknown";
 }
 
 function extractActionItemFromPattern(
@@ -66,7 +74,7 @@ function extractActionItemFromPattern(
         createdAt: message.created_at,
         channelId: message.channel_id,
         channelName,
-        authorUsername: message.profiles?.username || "Unknown",
+        authorUsername: getUsername(message.profiles),
         authorId: message.user_id,
       };
     }
@@ -138,7 +146,7 @@ Examples:
       createdAt: message.created_at,
       channelId: message.channel_id,
       channelName,
-      authorUsername: message.profiles?.username || "Unknown",
+      authorUsername: getUsername(message.profiles),
       authorId: message.user_id,
     };
   } catch (error) {
@@ -149,7 +157,7 @@ Examples:
 
 export async function POST(request: NextRequest) {
   try {
-    const { channelId, hoursBack = 24 } = await request.json();
+    const { channelId, userId, hoursBack = 24 } = await request.json();
 
     if (!channelId) {
       return NextResponse.json({ error: "Channel ID required" }, { status: 400 });
@@ -165,6 +173,19 @@ export async function POST(request: NextRequest) {
       .single();
 
     const channelName = channel?.name;
+
+    // Get dismissed action items for this user
+    let dismissedMessageIds: string[] = [];
+    if (userId) {
+      const { data: dismissed } = await supabase
+        .from("dismissed_action_items")
+        .select("message_id")
+        .eq("user_id", userId);
+
+      if (dismissed) {
+        dismissedMessageIds = dismissed.map(d => d.message_id);
+      }
+    }
 
     // Calculate time range
     const since = new Date();
@@ -205,8 +226,13 @@ export async function POST(request: NextRequest) {
     const actionItems: ActionItem[] = [];
     const messagesForAI: MessageWithProfile[] = [];
 
-    // First pass: try regex patterns
+    // First pass: try regex patterns (skip dismissed items)
     for (const msg of messages as MessageWithProfile[]) {
+      // Skip dismissed action items
+      if (dismissedMessageIds.includes(msg.id)) {
+        continue;
+      }
+
       const item = extractActionItemFromPattern(msg, channelName);
       if (item) {
         actionItems.push(item);
@@ -247,6 +273,46 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Action items error:", error);
     return NextResponse.json({ error: "Failed to extract action items" }, { status: 500 });
+  }
+}
+
+// Dismiss an action item
+export async function DELETE(request: NextRequest) {
+  try {
+    const { messageId, userId } = await request.json();
+
+    if (!messageId || !userId) {
+      return NextResponse.json(
+        { error: "Message ID and User ID required" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServiceClient();
+
+    // Insert into dismissed_action_items (upsert to handle duplicates)
+    const { error } = await supabase
+      .from("dismissed_action_items")
+      .upsert(
+        { user_id: userId, message_id: messageId },
+        { onConflict: "user_id,message_id" }
+      );
+
+    if (error) {
+      console.error("Error dismissing action item:", error);
+      return NextResponse.json(
+        { error: "Failed to dismiss action item" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Dismiss action item error:", error);
+    return NextResponse.json(
+      { error: "Failed to dismiss action item" },
+      { status: 500 }
+    );
   }
 }
 
