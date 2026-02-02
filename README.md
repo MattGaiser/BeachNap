@@ -2,7 +2,34 @@
 
 > A Slack clone that transforms your team's chat into a searchable knowledge base with real-time AI synthesis.
 
-**AskCodi Clone & Remix Week Submission** (Jan 26 - Feb 2, 2026)
+**[Live Demo](https://beach-nap.vercel.app)** | **[GitHub](https://github.com/MattGaiser/BeachNap)** | **AskCodi Clone & Remix Week Submission** (Jan 26 - Feb 2, 2026)
+
+*Built with the help of Claude Opus and kimi-k2.5:free*
+
+## Why "BeachNap"?
+
+The name is inspired by Slack—but asks the question: *why are you only slacking and not napping?*
+
+The answer: poor communication habits. Repetitive questions interrupt your flow. Vague "hi" or "hello" messages demand your attention without providing any useful information. You're constantly context-switching instead of relaxing.
+
+**BeachNap fixes this in two ways:**
+
+1. **Never get bothered by answered questions** — Our AI surfaces answers from your team's chat history *before* the question is even sent. If it's been answered before, you're never interrupted at all.
+
+2. **No more meaningless messages** — The Tone Check feature blocks incomplete messages like "hi", "hey", or "quick question?" that distract you but provide zero context. Every message that reaches you is actionable.
+
+### Try It Out
+
+**Knowledge Check** — Type these questions in the #engineering channel to see AI-synthesized answers:
+- `How do I deploy?`
+- `What database are we using?`
+- `How long do auth tokens last?`
+
+**Tone Check** — Try typing these incomplete messages to see the blocking warning:
+- `hi`
+- `hey`
+- `quick question`
+- `ping`
 
 ## The Clone & Twist
 
