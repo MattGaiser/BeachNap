@@ -1,6 +1,6 @@
 "use client";
 
-import { Lightbulb, X, Loader2, Sparkles } from "lucide-react";
+import { Lightbulb, X, Loader2, Sparkles, Send } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,9 +20,10 @@ interface PreflightCardProps {
   result: PreflightResult | null;
   isLoading: boolean;
   onDismiss: () => void;
+  onSendAnyway?: () => void;
 }
 
-export function PreflightCard({ result, isLoading, onDismiss }: PreflightCardProps) {
+export function PreflightCard({ result, isLoading, onDismiss, onSendAnyway }: PreflightCardProps) {
   if (isLoading) {
     return (
       <Card className="border-purple-200 bg-purple-50/50">
@@ -60,15 +61,28 @@ export function PreflightCard({ result, isLoading, onDismiss }: PreflightCardPro
       </CardHeader>
       <CardContent className="py-0 pb-3 px-4">
         <p className="text-sm text-foreground">{result.answer}</p>
-        <p className="text-xs text-muted-foreground mt-2">
-          {formatSourceLabel(result.sourceType, result.sourceCount)}
-          {result.timeRange && (
-            <span>
-              {" "}
-              ({formatTimeRange(result.timeRange.earliest, result.timeRange.latest)})
-            </span>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-muted-foreground">
+            {formatSourceLabel(result.sourceType, result.sourceCount)}
+            {result.timeRange && (
+              <span>
+                {" "}
+                ({formatTimeRange(result.timeRange.earliest, result.timeRange.latest)})
+              </span>
+            )}
+          </p>
+          {onSendAnyway && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={onSendAnyway}
+            >
+              <Send className="h-3 w-3 mr-1" />
+              Ask anyway
+            </Button>
           )}
-        </p>
+        </div>
       </CardContent>
     </Card>
   );

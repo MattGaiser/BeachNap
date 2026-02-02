@@ -75,6 +75,18 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
     resetTone();
   }, [message, user, dismissTone, enqueue, setQuery, clearResult, resetTone]);
 
+  // Send despite knowledge check showing an answer - user wants to ask anyway
+  const handleAskAnyway = useCallback(() => {
+    if (!message.trim() || !user) return;
+
+    // Clear the preflight result and send
+    clearResult();
+    enqueue(message);
+    setMessage("");
+    setQuery("");
+    resetTone();
+  }, [message, user, clearResult, enqueue, setQuery, resetTone]);
+
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;
     setMessage(value);
@@ -84,9 +96,10 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
 
   // Block sending if:
   // 1. Message is empty
-  // 2. Tone check detected incomplete message (user must dismiss warning first)
+  // 2. Tone check is in progress (waiting for result)
+  // 3. Tone check detected incomplete message (user must dismiss warning first)
   const hasToneWarning = toneResult?.isIncomplete === true;
-  const isSendDisabled = !message.trim() || hasToneWarning;
+  const isSendDisabled = !message.trim() || isToneLoading || hasToneWarning;
 
   // Store handleSend in a ref for the event handler
   const handleSendRef = useRef(handleSend);
@@ -131,6 +144,7 @@ export function MessageInput({ channelId, channelName }: MessageInputProps) {
           result={result}
           isLoading={isPreflightLoading}
           onDismiss={clearResult}
+          onSendAnyway={handleAskAnyway}
         />
       )}
 

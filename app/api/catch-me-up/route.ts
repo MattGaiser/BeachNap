@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         summary: null,
         messageCount: 0,
-        timeRange: `Last ${hoursBack} hours`,
+        timeRange: timeRangeLabel,
         noActivity: true,
         actionItems: [],
       });
@@ -112,7 +112,7 @@ Keep your response under 200 words.`,
         },
         {
           role: "user",
-          content: `Here are the messages from the last ${hoursBack} hours:\n\n${formattedMessages}`,
+          content: `Here are the messages from ${timeRangeLabel.toLowerCase()}:\n\n${formattedMessages}`,
         },
       ],
       max_tokens: 400,

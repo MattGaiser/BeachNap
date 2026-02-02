@@ -103,9 +103,10 @@ export default function DocDetailPage() {
               </h3>
               <div className="space-y-2">
                 {entry.source_messages.map((source, index) => (
-                  <div
+                  <Link
                     key={index}
-                    className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+                    href={source.channel_id ? `/channels/${source.channel_id}` : "#"}
+                    className={`flex items-center justify-between text-sm p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors ${source.channel_id ? 'cursor-pointer' : 'cursor-default'}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1 text-muted-foreground">
@@ -118,15 +119,12 @@ export default function DocDetailPage() {
                       </div>
                     </div>
                     {source.channel_id && (
-                      <Link
-                        href={`/channels/${source.channel_id}`}
-                        className="flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
+                      <div className="flex items-center gap-1 text-xs text-primary">
                         View in channel
                         <ExternalLink className="h-3 w-3" />
-                      </Link>
+                      </div>
                     )}
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
