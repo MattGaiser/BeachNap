@@ -42,7 +42,7 @@ export default function LoginPage() {
             BeachNap
           </CardTitle>
           <CardDescription className="text-base">
-            Your team&apos;s knowledge, instantly searchable
+            Slack, but even Slacker, with smart tools that eliminate repetitive questions and force the rest to be more thoughtful.
           </CardDescription>
         </CardHeader>
         <CardContent>
