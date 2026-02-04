@@ -42,7 +42,7 @@ export default function LoginPage() {
             BeachNap
           </CardTitle>
           <CardDescription className="text-base">
-            Slack, but even Slacker, with smart tools that eliminate repetitive questions and force the rest to be more thoughtful.
+            Slack, but even slacker, with smart tools that eliminate repetitive questions and force the rest to be more thoughtful.
           </CardDescription>
         </CardHeader>
         <CardContent>

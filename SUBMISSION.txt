@@ -1,6 +1,6 @@
 BeachNap - AI-Powered Team Knowledge
 
-Slack, but even Slacker, with smart tools that eliminate repetitive questions and force the rest to be more thoughtful.
+Slack, but even slacker, with smart tools that eliminate repetitive questions and force the rest to be more thoughtful.
 
 Live Demo: https://beach-nap.vercel.app
 GitHub: https://github.com/MattGaiser/BeachNap
